@@ -1,3 +1,10 @@
+##### PROJECT SPECIFIC GITIGNORES ######
+# Download these two images from the challenge portal itself. Too big to host on github.
+data/Post_Event_San_Juan.tif 
+data/Pre_Event_San_Juan.tif
+
+##### GENERAL PYTHON GITIGNORES ######
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
