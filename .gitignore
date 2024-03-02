@@ -4,8 +4,12 @@ data/Post_Event_San_Juan.tif
 data/Pre_Event_San_Juan.tif
 # Download this folder from the challenge portal itself. Too big to host on github.
 data/buildings-footprints-roi
-# Create the tiles directories from Phase-1 Benchmark Notebook only if you have the space locally. Arounf 5gb per image.
+# Create the tiles directories from Phase-1 Benchmark Notebook only if you have the space locally. Around 5gb per image.
 data/Post_Event_Grids_In_TIFF/
+data/Pre_Event_Grids_In_TIFF/
+data/Post_Event_Grids_In_JPEG/
+data/Pre_Event_Grids_In_JPEG/
+data/rasters
 
 ##### GENERAL PYTHON GITIGNORES ######
 
