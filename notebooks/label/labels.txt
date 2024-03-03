@@ -1,6 +1,0 @@
-__ignore__
-_background_
-undamagedresidentialbuilding
-damagedresidentialbuilding
-undamagedcommercialbuilding
-damagedcommercialbuilding

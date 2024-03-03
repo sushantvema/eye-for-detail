@@ -11,6 +11,8 @@ data/Post_Event_Grids_In_JPEG/
 data/Pre_Event_Grids_In_JPEG/
 data/rasters
 
+*.tif
+
 ##### GENERAL PYTHON GITIGNORES ######
 
 # Byte-compiled / optimized / DLL files
