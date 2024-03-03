@@ -1,22 +1,39 @@
+import os, sys
+sys.path.insert(0, os.path.abspath("../.."))
+
 from osgeo import gdal, osr
 import matplotlib.pyplot as plt
-
 import numpy as np
 import pathlib
+import shapely
+from PIL import Image
+import rasterio
+from rasterio import features
+from rasterio.enums import MergeAlg
+
+from config import RASTERS_DIR
 
 import os
+
+def get_image_array(tiff_file):
+    """
+    Returns the band data of a given .tif image.
+    """
+    if isinstance(tiff_file, pathlib.Path):
+        tiff_file = gdal.Open(tiff_file) 
+    bands = []
+    for i in range(1, 4):
+        bands.append(tiff_file.GetRasterBand(i).ReadAsArray())
+    bands = np.array(bands).transpose(2, 1, 0)
+    return bands
 
 def visualize_geotiff(tiff_file):
     """
     Plots RGB image of a given .tif file.
     """
-    if isinstance(tiff_file, str):
-        tiff_file = gdal.Open(tiff_file, gdal.GA_ReadOnly) 
-    bands = []
-    for i in range(1, 4):
-        bands.append(tiff_file.GetRasterBand(i).ReadAsArray())
-    bands = np.array(bands).transpose(2, 1, 0)
+    bands = get_image_array(tiff_file)
     plt.imshow(bands)
+    plt.show()
 
 def sample_random_tile_from_tif(sample_idx:int, input_file:str, output_dir:pathlib.Path, tile_width:int, tile_height:int):
     """
@@ -88,7 +105,10 @@ def convert_tif_crs_to_shapefile_crs(input_tif, output_dir, dest_crs: str):
     # Open input GeoTIFF file
     input_dataset = gdal.Open(input_tif)
 
-    file_name = str(input_tif).split(".")[0]
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+
+    file_name = str(input_tif).split(".")[0].split("/")[-1]
     output_tif_path = output_dir / f"{file_name}_converted.tif"
 
     # Create output GeoTIFF file with the desired target CRS
@@ -113,3 +133,54 @@ def get_corners_from_tif_in_certain_crs(input_tif, tile_width=512):
     x_1 = x_0 + tile_width * gt[1]
     y_1 = y_0 + tile_width * gt[5]
     return (x_0, y_0, x_1, y_1)
+
+def get_points_from_bounds(minx, miny, maxx, maxy):
+    """
+    Return all 4 enumerated coordinate points based on the top left and top right corner.
+    """
+    return [(minx, miny), (maxx, miny), (maxx, maxy), (minx, maxy)]
+    
+def get_buildings_in_polygon(shapefile, corner_coords):
+    """
+    Given a shapefile of building footprints and coordinate bounds for a Polygon enclosure,
+    find all of the building footprints within the Polygon.
+    """
+    sampled_image_polygon = shapely.Polygon(corner_coords)
+    import ipdb; ipdb.set_trace();
+    buildings_in_sampled_image = shapefile[shapefile.within(sampled_image_polygon)]
+
+    return buildings_in_sampled_image
+
+def get_transposed_image_data(input_tif):
+    """
+    Flips and rotates a .tif tile in order to match with building footprints. 
+    """
+    image_data = get_image_array(tiff_file=input_tif)
+    image = Image.fromarray(image_data)
+    image = image.transpose(Image.FLIP_LEFT_RIGHT)
+    image = image.rotate(90)
+    image_data = np.asarray(image).copy()
+    return image_data
+
+def rasterize(raster_path, shapefile):
+    with rasterio.open(raster_path, "r") as src:
+        # Get the CRS of the raster
+        raster_crs = src.crs
+
+        # Reproject the geometries
+        shapefile = shapefile.to_crs(raster_crs)
+
+        # Get list of geometries for all features in vector file
+        geom = [shapes for shapes in shapefile.geometry]
+
+        # Rasterize vector using the shape and coordinate system of the raster
+        rasterized = features.rasterize(geom,
+                                        out_shape = src.shape,
+                                        fill = 0,
+                                        out = None,
+                                        transform = src.transform,
+                                        all_touched = True,
+                                        merge_alg=MergeAlg.add,
+                                        default_value = 255,
+                                        dtype = None)
+        return rasterized
