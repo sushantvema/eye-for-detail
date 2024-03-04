@@ -1,0 +1,36 @@
+{
+    "version": "5.4.1",
+    "flags": {},
+    "imagePath": "47_tile_converted.tif",
+    "imageData": null,
+    "imageHeight": 512,
+    "imageWidth": 512,
+    "shapes": [
+        {
+            "label": "unlabeled",
+            "group_id": "bbox",
+            "description": "",
+            "shape_type": "polygon",
+            "flags": {},
+            "mask": null,
+            "points": [
+                [
+                    1.2579598962304313,
+                    454.5156672923048
+                ],
+                [
+                    58.18109893104662,
+                    454.5156672923048
+                ],
+                [
+                    58.18109893104662,
+                    388.5862791954086
+                ],
+                [
+                    1.2579598962304313,
+                    388.5862791954086
+                ]
+            ]
+        }
+    ]
+}

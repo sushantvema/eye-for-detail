@@ -14,6 +14,7 @@ from rasterio.enums import MergeAlg
 from config import RASTERS_DIR
 
 import os
+import json
 
 def get_image_array(tiff_file):
     """
@@ -27,7 +28,7 @@ def get_image_array(tiff_file):
     bands = np.array(bands).transpose(2, 1, 0)
     return bands
 
-def tiff_to_png(tiff_file, output_file):
+def tiff_to_jpeg(tiff_file, output_file):
     img = Image.open(tiff_file)
     img = img.convert("RGB")
     img.save(output_file)
@@ -151,7 +152,6 @@ def get_buildings_in_polygon(shapefile, corner_coords):
     find all of the building footprints within the Polygon.
     """
     sampled_image_polygon = shapely.Polygon(corner_coords)
-    # import ipdb; ipdb.set_trace();
     buildings_in_sampled_image = shapefile[shapefile.within(sampled_image_polygon)]
 
     return buildings_in_sampled_image
@@ -189,3 +189,53 @@ def rasterize(raster_path, shapefile):
                                         default_value = 255,
                                         dtype = None)
         return rasterized
+    
+def convert_coords_to_pixel_coords(polygon, geotransform, use_bounding_box=True):
+    if use_bounding_box:
+        bounds = polygon.bounds
+        building_coords = np.array(get_points_from_bounds(*bounds))
+    if not use_bounding_box:
+        building_coords = np.array(list(polygon.exterior.coords))
+    pixel_coords = np.zeros_like(building_coords)
+    pixel_coords[:, 0] = (building_coords[:, 0] - geotransform[0]) / geotransform[1]
+    pixel_coords[:, 1] = (building_coords[:, 1] - geotransform[3]) / geotransform[5]
+    return pixel_coords
+
+def convert_all_coords_to_pixel_coords(gdf, converted_tile_path, use_bounding_box:bool):
+    gt = gdal.Open(converted_tile_path).GetGeoTransform()
+    def apply_conversion(row):
+        return convert_coords_to_pixel_coords(row["geometry"], gt, use_bounding_box=use_bounding_box)
+    return gdf.apply(apply_conversion, axis=1)
+
+def create_label_shape_dict(pixel_coords, group_id:str):
+    labelme_dict = {
+        "label": "unlabeled",
+        "group_id": group_id,
+        "description": "",
+        "shape_type": "polygon",
+        "flags": {},
+        "mask": None,
+        "points": pixel_coords.tolist()
+    }
+    return labelme_dict   
+
+def get_all_labelme_shapes(gdf, converted_tile_path, use_bounding_box:bool):
+    pixel_coords = convert_all_coords_to_pixel_coords(gdf, converted_tile_path, use_bounding_box=use_bounding_box)
+    group_id = "bbox" if use_bounding_box else "polygon"
+    shapes = [
+        create_label_shape_dict(coords, group_id=group_id) for coords in pixel_coords
+    ]
+    return shapes
+
+def create_labelme_json(building_footprints_in_tile, converted_tile_path, output_file_path):
+    file_name_of_tile = str(converted_tile_path).split("/")[-1]
+    labelme_json = {
+        "version": "5.4.1",
+        "flags": {},
+        "imagePath": file_name_of_tile,
+        "imageData": None,
+        "imageHeight": 512,
+        "imageWidth": 512,
+        "shapes": get_all_labelme_shapes(building_footprints_in_tile, converted_tile_path, use_bounding_box=True)
+    }
+    json.dump(labelme_json, open(output_file_path, "w+"), indent=4)

@@ -20,6 +20,9 @@ POST_EVENT_ORIGINAL_TILES_JPEG_DIR = TILES_DIR / "Post_Event_Grids_In_JPEG"
 TILE_DIMENSIONS = 512  #pixels width and height (square tiles)
 NUM_SAMPLE_TILES = 100
 
+# Training data directory for custom dataset generation
+TRAIN_DIR = DATA_DIR / "train"
+
 # Submission images
 TEST_SET_DIR = DATA_DIR / "challenge_1_submission_images" 
 
