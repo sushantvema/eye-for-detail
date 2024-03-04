@@ -34,21 +34,22 @@ def main():
         tile_path = sample_random_tile_from_tif(sample_idx=i, input_file=post_event_source_image, output_dir=POST_EVENT_ORIGINAL_TILES_TIF_DIR,
                                 tile_height=TILE_DIMENSIONS, tile_width=TILE_DIMENSIONS)
 
-        visualize_geotiff(tile_path)
-
         converted_tile_path = convert_tif_crs_to_shapefile_crs(input_tif=tile_path, output_dir=POST_EVENT_CONVERTED_TILES_TIF_DIR, dest_crs=shapefile_crs)
 
-        corner_coordinates = get_corners_from_tif_in_certain_crs(input_tif=tile_path, tile_width=TILE_DIMENSIONS)
+        corner_coordinates = get_corners_from_tif_in_certain_crs(input_tif=converted_tile_path, tile_width=TILE_DIMENSIONS)
         
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
         four_corner_coords = get_points_from_bounds(*corner_coordinates)
 
         building_footprints_in_tile = get_buildings_in_polygon(shapefile=shapefile, corner_coords=four_corner_coords)
+        
+        if len(building_footprints_in_tile):
+            continue
 
-        transposed_image = get_transposed_image_data(input_tif=tile_path)
+        transposed_image = get_transposed_image_data(input_tif=converted_tile_path)
 
-        rasterized_footprints = rasterize(raster_path=tile_path, shapefile=building_footprints_in_tile)
+        rasterized_footprints = rasterize(raster_path=converted_tile_path, shapefile=building_footprints_in_tile)
 
         transposed_image[rasterized_footprints != 0] = 0
         plt.imshow(transposed_image)

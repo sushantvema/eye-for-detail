@@ -27,6 +27,11 @@ def get_image_array(tiff_file):
     bands = np.array(bands).transpose(2, 1, 0)
     return bands
 
+def tiff_to_png(tiff_file, output_file):
+    img = Image.open(tiff_file)
+    img = img.convert("RGB")
+    img.save(output_file)
+
 def visualize_geotiff(tiff_file):
     """
     Plots RGB image of a given .tif file.
@@ -58,7 +63,7 @@ def sample_random_tile_from_tif(sample_idx:int, input_file:str, output_dir:pathl
 
     tile = []
     for band in range(1, num_bands + 1):
-        tile_data = ds.GetRasterBand(band).ReadAsArray(x_offset, y_offset, tile_width, tile_height)
+        tile_data = ds.GetRasterBand(band).ReadAsArray(x_offset, y_offset, tile_width , tile_height)
         tile.append(tile_data)
 
     # Create output filename
@@ -146,7 +151,7 @@ def get_buildings_in_polygon(shapefile, corner_coords):
     find all of the building footprints within the Polygon.
     """
     sampled_image_polygon = shapely.Polygon(corner_coords)
-    import ipdb; ipdb.set_trace();
+    # import ipdb; ipdb.set_trace();
     buildings_in_sampled_image = shapefile[shapefile.within(sampled_image_polygon)]
 
     return buildings_in_sampled_image
