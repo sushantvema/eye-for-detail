@@ -227,8 +227,8 @@ def get_all_labelme_shapes(gdf, converted_tile_path, use_bounding_box:bool):
     ]
     return shapes
 
-def create_labelme_json(building_footprints_in_tile, converted_tile_path, output_file_path):
-    file_name_of_tile = str(converted_tile_path).split("/")[-1]
+def create_labelme_json(building_footprints_in_tile, tile_path, output_file_path):
+    file_name_of_tile = str(tile_path).split("/")[-1]
     labelme_json = {
         "version": "5.4.1",
         "flags": {},
@@ -236,6 +236,33 @@ def create_labelme_json(building_footprints_in_tile, converted_tile_path, output
         "imageData": None,
         "imageHeight": 512,
         "imageWidth": 512,
-        "shapes": get_all_labelme_shapes(building_footprints_in_tile, converted_tile_path, use_bounding_box=True)
+        "shapes": get_all_labelme_shapes(building_footprints_in_tile, tile_path, use_bounding_box=True)
     }
     json.dump(labelme_json, open(output_file_path, "w+"), indent=4)
+
+def convert_tiff_to_jpeg(input_dir, output_dir):
+    # check if output_dir exists, if not create it
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    for filename in os.listdir(input_dir):
+        # check if file is an image (ends with .tif)
+        if filename.endswith('.tif'):
+            img = Image.open(os.path.join(input_dir, filename))
+        
+            # check if image is RGB mode, if not convert it
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+        
+            # create new filename, replace .tif with .jpg
+            output_filename = os.path.splitext(filename)[0] + '.jpg'
+        
+            # save the image in JPEG format
+            img.save(os.path.join(output_dir, output_filename), 'JPEG')
+    print("Conversion from TIFF to JPEG completed.")
+
+def delete_file_by_extension(dir_name, extension:str):
+    _ = os.listdir(dir_name)
+    for file in _:
+        if file.endswith(extension):
+            os.remove(os.path.join(dir_name, file))

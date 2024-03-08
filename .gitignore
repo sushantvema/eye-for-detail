@@ -12,6 +12,8 @@ data/Pre_Event_Grids_In_JPEG/
 data/rasters
 
 *.tif
+*.jpg
+*.json
 
 ##### GENERAL PYTHON GITIGNORES ######
 
