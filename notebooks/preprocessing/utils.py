@@ -10,6 +10,7 @@ from PIL import Image
 import rasterio
 from rasterio import features
 from rasterio.enums import MergeAlg
+import cv2
 
 from config import RASTERS_DIR
 
@@ -96,7 +97,7 @@ def sample_random_tile_from_tif(sample_idx:int, input_file:str, output_dir:pathl
 
     print("Tiles generation completed.")
 
-    return output_file
+    return output_file, x_offset, y_offset
 
 def convert_tif_crs_to_shapefile_crs(input_tif, output_dir, dest_crs: str):
     """
@@ -248,17 +249,13 @@ def convert_tiff_to_jpeg(input_dir, output_dir):
     for filename in os.listdir(input_dir):
         # check if file is an image (ends with .tif)
         if filename.endswith('.tif'):
-            img = Image.open(os.path.join(input_dir, filename))
-        
-            # check if image is RGB mode, if not convert it
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
+            img = cv2.imread(str(input_dir / filename))
         
             # create new filename, replace .tif with .jpg
             output_filename = os.path.splitext(filename)[0] + '.jpg'
         
             # save the image in JPEG format
-            img.save(os.path.join(output_dir, output_filename), 'JPEG')
+            cv2.imwrite(str(output_dir / output_filename), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
     print("Conversion from TIFF to JPEG completed.")
 
 def delete_file_by_extension(dir_name, extension:str):

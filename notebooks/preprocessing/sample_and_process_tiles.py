@@ -1,5 +1,8 @@
 ## IMPORTS
 import os, sys
+import random
+import pathlib
+import json
 sys.path.insert(0, os.path.abspath("../.."))
 
 import numpy as np
@@ -14,6 +17,7 @@ from utils import sample_random_tile_from_tif, convert_tif_crs_to_shapefile_crs
 from utils import get_corners_from_tif_in_certain_crs, get_points_from_bounds, get_buildings_in_polygon
 from utils import create_labelme_json
 from utils import convert_tiff_to_jpeg, delete_file_by_extension
+from roboflow import Roboflow
 
 import argparse
 
@@ -30,8 +34,17 @@ def main(arguments):
     parser.add_argument('--num-samples', help="Override NUM_SAMPLE in config.py with a custom number.", type=str)
     parser.add_argument('--should-convert-crs', help="Decide whether to convert tile projections to match building footprints shapefile.", action="store_true")
     parser.add_argument('--img-type', help="What image type to convert the tiles into.", type=str, choices=[".tif", ".jpg", ".png"])
+    parser.add_argument("--upload-to-roboflow", help="Flag if present will upload image to roboflow.", action="store_true")
+    parser.add_argument("--seed", help="Random seed for sampling", type=int, default=random.randint(0, 10_000_000))
 
-    args = parser.parse_args(arguments)
+    args = parser.parse_args(arguments)  
+    
+    if args.upload_to_roboflow:
+        creds = json.load(open(pathlib.Path(__file__).parent.parent.parent / "credentials.json", "r"))
+        rf = Roboflow(creds["ROBOFLOW_API_KEY"])
+        workspaceId = 'sushantcv'
+        projectId = 'ey-openscience-data-challenge-24'
+        project = rf.workspace(workspaceId).project(projectId)
 
     if args.num_samples is not None:
         NUM_SAMPLE_TILES = args.num_samples
@@ -52,8 +65,8 @@ def main(arguments):
     shapefile = gpd.read_file(BUILDING_FOOTPRINTS_DIR)
     shapefile_crs = shapefile.crs
 
-    if IN_DEVELOPMENT:
-        np.random.seed(0)
+    np.random.seed(args.seed)
+    print("Using seed:", args.seed)
         # import ipdb; ipdb.set_trace()
 
     OUTPUT_DIR = TRAIN_DIR / dataset_name
@@ -65,11 +78,11 @@ def main(arguments):
     counter = int(NUM_SAMPLE_TILES)
     while counter > 0:
         if convert_crs:
-            tile_path = sample_random_tile_from_tif(sample_idx=counter, input_file=post_event_source_image, output_dir=POST_EVENT_ORIGINAL_TILES_TIF_DIR,
+            tile_path, x_offset, y_offset = sample_random_tile_from_tif(sample_idx=counter, input_file=post_event_source_image, output_dir=POST_EVENT_ORIGINAL_TILES_TIF_DIR,
                                     tile_height=TILE_DIMENSIONS, tile_width=TILE_DIMENSIONS)
             converted_tile_path = convert_tif_crs_to_shapefile_crs(input_tif=tile_path, output_dir=OUTPUT_DIR, dest_crs=shapefile_crs)
         else:
-            tile_path = sample_random_tile_from_tif(sample_idx=counter, input_file=post_event_source_image, output_dir=OUTPUT_DIR,
+            tile_path, x_offset, y_offset = sample_random_tile_from_tif(sample_idx=counter, input_file=post_event_source_image, output_dir=OUTPUT_DIR,
                                     tile_height=TILE_DIMENSIONS, tile_width=TILE_DIMENSIONS)
             converted_tile_path = convert_tif_crs_to_shapefile_crs(input_tif=tile_path, output_dir=POST_EVENT_CONVERTED_TILES_TIF_DIR, dest_crs=shapefile_crs)
 
@@ -89,12 +102,18 @@ def main(arguments):
             tile_name = str(tile_path).split(".")[0].split("/")[-1]
             output_file_path = TRAIN_DIR / OUTPUT_DIR / f"{tile_name}.json"
             
+        create_labelme_json(building_footprints_in_tile, tile_path, output_file_path)
+            
         if file_extension == ".jpg":
             convert_tiff_to_jpeg(input_dir=OUTPUT_DIR, output_dir=OUTPUT_DIR)
-            tile_path = tile_path.replace(tile_path.with_suffix('.jpg'))
+            tile_path = pathlib.Path(tile_path.parent, tile_path.stem + ".jpg")
+            tile_path = tile_path.rename(pathlib.Path(tile_path.parent, f"{x_offset}_{y_offset}" + ".jpg"))
             delete_file_by_extension(dir_name=OUTPUT_DIR, extension=".tif")
-
-        create_labelme_json(building_footprints_in_tile, tile_path, output_file_path)
+        
+        if args.upload_to_roboflow:
+            project.upload(
+                image_path=str(tile_path)
+            )
 
         counter -= 1
         

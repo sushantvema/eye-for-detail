@@ -13,6 +13,7 @@ data/rasters
 
 *.tif
 *.jpg
+*.png
 *.json
 
 ##### GENERAL PYTHON GITIGNORES ######
